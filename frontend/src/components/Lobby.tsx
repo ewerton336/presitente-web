@@ -12,7 +12,12 @@ import {
   Alert,
   Chip,
   Divider,
+  IconButton,
+  Tooltip,
+  Snackbar,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ShareIcon from "@mui/icons-material/Share";
 import { gameService } from "../services/gameService";
 import type { GameState } from "../types/game";
 
@@ -23,6 +28,7 @@ export function Lobby() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   // Inicializa a conexão e entra na sala
   useEffect(() => {
@@ -155,6 +161,38 @@ export function Lobby() {
     }
   };
 
+  const handleCopyLink = () => {
+    const inviteLink = `${window.location.origin}/join/${roomId}`;
+    navigator.clipboard
+      .writeText(inviteLink)
+      .then(() => {
+        setSnackbarOpen(true);
+      })
+      .catch((err) => {
+        console.error("Erro ao copiar link:", err);
+        setError("Erro ao copiar link");
+      });
+  };
+
+  const handleShareLink = async () => {
+    const inviteLink = `${window.location.origin}/join/${roomId}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Convite para jogar Presidente",
+          text: `Entre na sala ${gameState?.roomName} para jogar Presidente!`,
+          url: inviteLink,
+        });
+      } catch (err) {
+        console.error("Erro ao compartilhar:", err);
+      }
+    } else {
+      // Fallback para copiar
+      handleCopyLink();
+    }
+  };
+
   const getRankLabel = (rank: string) => {
     const rankLabels: Record<string, string> = {
       Nada: "Nada",
@@ -208,12 +246,30 @@ export function Lobby() {
           Sala: {gameState.roomName}
         </Typography>
 
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 1,
+            mb: 3,
+          }}
+        >
           <Chip
             label={`Código: ${roomId}`}
             color="primary"
             sx={{ fontSize: "1.2rem", padding: "20px 10px" }}
           />
+          <Tooltip title="Copiar link de convite">
+            <IconButton onClick={handleCopyLink} color="primary" size="large">
+              <ContentCopyIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Compartilhar">
+            <IconButton onClick={handleShareLink} color="primary" size="large">
+              <ShareIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
 
         {error && (
@@ -286,6 +342,14 @@ export function Lobby() {
           )}
         </Box>
       </Paper>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message="Link copiado para a área de transferência!"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Container>
   );
 }
