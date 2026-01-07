@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Container,
   Alert,
@@ -13,44 +13,52 @@ import {
   DialogActions,
   List,
   ListItem,
-  ListItemText
-} from '@mui/material';
-import { gameService } from '../services/gameService';
-import type { Card, Player, CardPlay } from '../types/game';
-import { GameTable } from './GameTable';
-import { PlayerHand } from './PlayerHand';
-import { PlayersList } from './PlayersList';
+  ListItemText,
+} from "@mui/material";
+import { gameService } from "../services/gameService";
+import type { Card, Player, CardPlay } from "../types/game";
+import { GameTable } from "./GameTable";
+import { PlayerHand } from "./PlayerHand";
+import { PlayersList } from "./PlayersList";
 
 export function Game() {
   const { roomId } = useParams<{ roomId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [myCards, setMyCards] = useState<Card[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<{ id: string; name: string } | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [lastPlay, setLastPlay] = useState<CardPlay | null>(null);
   const [isMyTurn, setIsMyTurn] = useState(false);
-  const [gamePhase, setGamePhase] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [gamePhase, setGamePhase] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [gameFinished, setGameFinished] = useState(false);
   const [rankings, setRankings] = useState<any[]>([]);
   const [isCreator, setIsCreator] = useState(false);
+  const [myPlayerId, setMyPlayerId] = useState<string>("");
 
   useEffect(() => {
     const gameData = location.state?.gameData;
     if (gameData) {
+      console.log("=== Dados iniciais do jogo ===", gameData);
       setMyCards(gameData.yourCards || []);
       setPlayers(gameData.players || []);
       setCurrentPlayer(gameData.currentPlayer);
-      setGamePhase('Playing');
-      
+      setGamePhase("Playing");
+      setMyPlayerId(gameData.yourPlayerId || "");
+
       // Verifica se é o criador da sala
-      const myPlayer = gameData.players?.find((p: Player) => p.isRoomCreator);
+      const myPlayer = gameData.players?.find(
+        (p: Player) => p.id === gameData.yourPlayerId
+      );
       if (myPlayer) {
-        setIsCreator(true);
+        setIsCreator(myPlayer.isRoomCreator);
       }
     }
   }, [location.state]);
@@ -58,52 +66,51 @@ export function Game() {
   useEffect(() => {
     // Handler para quando um jogador joga
     const handlePlayerPlayed = (data: any) => {
-      console.log('Jogador jogou:', data);
+      console.log("=== Jogador jogou ===", data);
+      console.log("data.cards:", data.cards);
+
       setLastPlay({
         playerId: data.playerId,
         playerName: data.playerName,
-        cards: data.cards,
-        playType: data.playType
+        cards: data.cards || [],
+        playType: data.playType,
       });
       setCurrentPlayer(data.currentPlayer);
       setGamePhase(data.phase);
       setSelectedCards([]);
-      
+
       // Atualiza a contagem de cartas dos jogadores
-      setPlayers(prevPlayers =>
-        prevPlayers.map(p =>
-          p.id === data.playerId
-            ? { ...p, cardCount: data.playerCardCount }
-            : p
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((p) =>
+          p.id === data.playerId ? { ...p, cardCount: data.playerCardCount } : p
         )
       );
 
-      setMessage(`${data.playerName} jogou ${data.cards.length} carta(s)`);
+      const cardCount = data.cards ? data.cards.length : 0;
+      setMessage(`${data.playerName} jogou ${cardCount} carta(s)`);
     };
 
     // Handler para quando um jogador passa
     const handlePlayerPassed = (data: any) => {
-      console.log('Jogador passou:', data);
+      console.log("Jogador passou:", data);
       setCurrentPlayer(data.currentPlayer);
       setMessage(`${data.playerName} passou a vez`);
     };
 
     // Handler para nova rodada
     const handleNewRound = (data: any) => {
-      console.log('Nova rodada:', data);
+      console.log("Nova rodada:", data);
       setLastPlay(null);
       setCurrentPlayer(data.currentPlayer);
-      setMessage('Nova rodada iniciada!');
+      setMessage("Nova rodada iniciada!");
     };
 
     // Handler para quando um jogador termina
     const handlePlayerFinished = (data: any) => {
-      console.log('Jogador terminou:', data);
-      setPlayers(prevPlayers =>
-        prevPlayers.map(p =>
-          p.id === data.playerId
-            ? { ...p, hasFinished: true }
-            : p
+      console.log("Jogador terminou:", data);
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((p) =>
+          p.id === data.playerId ? { ...p, hasFinished: true } : p
         )
       );
       setMessage(`${data.playerName} terminou em ${data.position}º lugar!`);
@@ -111,66 +118,83 @@ export function Game() {
 
     // Handler para quando o jogo termina
     const handleGameFinished = (data: any) => {
-      console.log('Jogo terminou:', data);
+      console.log("Jogo terminou:", data);
       setGameFinished(true);
       setRankings(data.rankings);
-      setGamePhase('GameFinished');
+      setGamePhase("GameFinished");
     };
 
     // Handler para quando o jogo reinicia
     const handleGameStarted = (data: any) => {
-      console.log('Novo jogo iniciado:', data);
+      console.log("Novo jogo iniciado:", data);
       setMyCards(data.yourCards || []);
       setPlayers(data.players || []);
       setCurrentPlayer(data.currentPlayer);
+      setMyPlayerId(data.yourPlayerId || "");
       setLastPlay(null);
       setSelectedCards([]);
-      setGamePhase('Playing');
+      setGamePhase("Playing");
       setGameFinished(false);
-      setMessage('Novo jogo iniciado!');
+      setMessage("Novo jogo iniciado!");
     };
 
-    gameService.on('PlayerPlayed', handlePlayerPlayed);
-    gameService.on('PlayerPassed', handlePlayerPassed);
-    gameService.on('NewRound', handleNewRound);
-    gameService.on('PlayerFinished', handlePlayerFinished);
-    gameService.on('GameFinished', handleGameFinished);
-    gameService.on('GameStarted', handleGameStarted);
+    gameService.on("PlayerPlayed", handlePlayerPlayed);
+    gameService.on("PlayerPassed", handlePlayerPassed);
+    gameService.on("NewRound", handleNewRound);
+    gameService.on("PlayerFinished", handlePlayerFinished);
+    gameService.on("GameFinished", handleGameFinished);
+    gameService.on("GameStarted", handleGameStarted);
 
     return () => {
-      gameService.off('PlayerPlayed', handlePlayerPlayed);
-      gameService.off('PlayerPassed', handlePlayerPassed);
-      gameService.off('NewRound', handleNewRound);
-      gameService.off('PlayerFinished', handlePlayerFinished);
-      gameService.off('GameFinished', handleGameFinished);
-      gameService.off('GameStarted', handleGameStarted);
+      gameService.off("PlayerPlayed", handlePlayerPlayed);
+      gameService.off("PlayerPassed", handlePlayerPassed);
+      gameService.off("NewRound", handleNewRound);
+      gameService.off("PlayerFinished", handlePlayerFinished);
+      gameService.off("GameFinished", handleGameFinished);
+      gameService.off("GameStarted", handleGameStarted);
     };
   }, []);
 
   // Atualiza se é a vez do jogador
   useEffect(() => {
-    if (currentPlayer && players.length > 0) {
-      // Encontra o jogador atual pelo connection ID
-      const myPlayer = players.find(p => p.isRoomCreator === isCreator);
-      if (myPlayer) {
-        setIsMyTurn(currentPlayer.id === myPlayer.id);
-      }
+    console.log("=== Verificando turno ===");
+    console.log("currentPlayer:", currentPlayer);
+    console.log("myPlayerId:", myPlayerId);
+    console.log("players:", players);
+
+    if (currentPlayer && myPlayerId) {
+      const isMyTurnValue = currentPlayer.id === myPlayerId;
+      console.log("É minha vez?", isMyTurnValue);
+      setIsMyTurn(isMyTurnValue);
     }
-  }, [currentPlayer, players, isCreator]);
+  }, [currentPlayer, myPlayerId, players]);
 
   const handleCardClick = (cardId: string) => {
-    if (!isMyTurn || gamePhase !== 'Playing') return;
+    console.log("=== Card clicked ===");
+    console.log("cardId:", cardId);
+    console.log("isMyTurn:", isMyTurn);
+    console.log("gamePhase:", gamePhase);
 
-    setSelectedCards(prev => {
+    if (!isMyTurn || gamePhase !== "Playing") {
+      console.warn(
+        "Clique bloqueado! isMyTurn:",
+        isMyTurn,
+        "gamePhase:",
+        gamePhase
+      );
+      return;
+    }
+
+    setSelectedCards((prev) => {
       if (prev.includes(cardId)) {
-        return prev.filter(id => id !== cardId);
+        return prev.filter((id) => id !== cardId);
       } else {
         // Verifica se todas as cartas selecionadas têm o mesmo valor
         if (prev.length > 0) {
-          const firstCard = myCards.find(c => c.id === prev[0]);
-          const newCard = myCards.find(c => c.id === cardId);
+          const firstCard = myCards.find((c) => c.id === prev[0]);
+          const newCard = myCards.find((c) => c.id === cardId);
           if (firstCard && newCard && firstCard.value !== newCard.value) {
-            setError('Selecione cartas do mesmo valor');
+            setError("Selecione cartas do mesmo valor");
             return prev;
           }
         }
@@ -181,21 +205,21 @@ export function Game() {
 
   const handlePlay = async () => {
     if (selectedCards.length === 0) {
-      setError('Selecione pelo menos uma carta');
+      setError("Selecione pelo menos uma carta");
       return;
     }
 
     try {
       const result = await gameService.playCards(selectedCards);
       if (!result.success) {
-        setError(result.error || 'Erro ao jogar cartas');
+        setError(result.error || "Erro ao jogar cartas");
       } else {
         // Remove as cartas jogadas da mão
-        setMyCards(prev => prev.filter(c => !selectedCards.includes(c.id)));
+        setMyCards((prev) => prev.filter((c) => !selectedCards.includes(c.id)));
         setSelectedCards([]);
       }
     } catch (err) {
-      setError('Erro ao jogar cartas');
+      setError("Erro ao jogar cartas");
       console.error(err);
     }
   };
@@ -204,10 +228,10 @@ export function Game() {
     try {
       const result = await gameService.pass();
       if (!result.success) {
-        setError(result.error || 'Erro ao passar');
+        setError(result.error || "Erro ao passar");
       }
     } catch (err) {
-      setError('Erro ao passar');
+      setError("Erro ao passar");
       console.error(err);
     }
   };
@@ -216,29 +240,35 @@ export function Game() {
     try {
       const result = await gameService.startNextGame();
       if (!result.success) {
-        setError(result.error || 'Erro ao iniciar próximo jogo');
+        setError(result.error || "Erro ao iniciar próximo jogo");
       }
     } catch (err) {
-      setError('Erro ao iniciar próximo jogo');
+      setError("Erro ao iniciar próximo jogo");
       console.error(err);
     }
   };
 
   const getRankLabel = (rank: string) => {
     const rankLabels: Record<string, string> = {
-      'Nada': 'Nada',
-      'Presidente': '👑 Presidente',
-      'VicePresidente': '🥈 Vice-Presidente',
-      'SubCu': '🥉 Sub-Cu',
-      'Cu': '💩 Cu'
+      Nada: "Nada",
+      Presidente: "👑 Presidente",
+      VicePresidente: "🥈 Vice-Presidente",
+      SubCu: "🥉 Sub-Cu",
+      Cu: "💩 Cu",
     };
     return rankLabels[rank] || rank;
   };
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
-        <Box sx={{ flex: { md: '1 1 75%' } }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 3,
+          flexDirection: { xs: "column", md: "row" },
+        }}
+      >
+        <Box sx={{ flex: { md: "1 1 75%" } }}>
           <Box sx={{ mb: 2 }}>
             <Typography variant="h4" gutterBottom>
               Sala: {roomId}
@@ -256,13 +286,13 @@ export function Game() {
             onCardClick={handleCardClick}
             onPlay={handlePlay}
             onPass={handlePass}
-            canPlay={isMyTurn && gamePhase === 'Playing'}
-            canPass={isMyTurn && lastPlay !== null && gamePhase === 'Playing'}
-            disabled={!isMyTurn || gamePhase !== 'Playing'}
+            canPlay={isMyTurn && gamePhase === "Playing"}
+            canPass={isMyTurn && lastPlay !== null && gamePhase === "Playing"}
+            disabled={!isMyTurn || gamePhase !== "Playing"}
           />
         </Box>
 
-        <Box sx={{ flex: { md: '1 1 25%' } }}>
+        <Box sx={{ flex: { md: "1 1 25%" } }}>
           <PlayersList
             players={players}
             currentPlayerId={currentPlayer?.id || null}
@@ -274,10 +304,10 @@ export function Game() {
       <Snackbar
         open={!!message}
         autoHideDuration={3000}
-        onClose={() => setMessage('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={() => setMessage("")}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert severity="info" onClose={() => setMessage('')}>
+        <Alert severity="info" onClose={() => setMessage("")}>
           {message}
         </Alert>
       </Snackbar>
@@ -286,10 +316,10 @@ export function Game() {
       <Snackbar
         open={!!error}
         autoHideDuration={5000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={() => setError("")}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert severity="error" onClose={() => setError('')}>
+        <Alert severity="error" onClose={() => setError("")}>
           {error}
         </Alert>
       </Snackbar>
@@ -317,9 +347,7 @@ export function Game() {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => navigate('/')}>
-            Voltar ao Início
-          </Button>
+          <Button onClick={() => navigate("/")}>Voltar ao Início</Button>
           {isCreator && (
             <Button variant="contained" onClick={handleStartNextGame}>
               Jogar Novamente
@@ -330,4 +358,3 @@ export function Game() {
     </Container>
   );
 }
-

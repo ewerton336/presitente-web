@@ -20,12 +20,12 @@ public class GameHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _logger.LogInformation("OnDisconnectedAsync: Conexão {ConnectionId} desconectada", Context.ConnectionId);
-        
+
         if (exception != null)
         {
             _logger.LogWarning(exception, "OnDisconnectedAsync: Desconexão com exceção para {ConnectionId}", Context.ConnectionId);
         }
-        
+
         var room = _roomManager.FindRoomByConnectionId(Context.ConnectionId);
         if (room != null)
         {
@@ -34,7 +34,7 @@ public class GameHub : Hub
             {
                 _logger.LogInformation("OnDisconnectedAsync: Removendo jogador '{PlayerName}' da sala '{RoomId}'", player.Name, room.Id);
                 room.RemovePlayer(Context.ConnectionId);
-                
+
                 // Notifica os outros jogadores
                 await Clients.Group(room.Id).SendAsync("PlayerLeft", new
                 {
@@ -60,7 +60,7 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("CreateRoom: Tentando criar sala '{RoomName}' para conexão {ConnectionId}", roomName, Context.ConnectionId);
-            
+
             var room = _roomManager.CreateRoom(roomName, Context.ConnectionId);
             await Groups.AddToGroupAsync(Context.ConnectionId, room.Id);
 
@@ -89,12 +89,12 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("JoinRoom: Jogador '{PlayerName}' tentando entrar na sala '{RoomId}' (conexão: {ConnectionId})", playerName, roomId, Context.ConnectionId);
-            
+
             // Normaliza o roomId para maiúsculas
             var normalizedRoomId = roomId?.ToUpperInvariant() ?? "";
-            
+
             _logger.LogInformation("JoinRoom: RoomId normalizado: '{NormalizedRoomId}'", normalizedRoomId);
-            
+
             var room = _roomManager.GetRoom(normalizedRoomId);
             if (room == null)
             {
@@ -113,7 +113,7 @@ public class GameHub : Hub
             if (existingPlayer != null)
             {
                 _logger.LogInformation("JoinRoom: Jogador '{PlayerName}' já está na sala '{RoomId}'. Reenviando estado...", playerName, normalizedRoomId);
-                
+
                 // Se já está na sala, apenas reenvia o estado
                 var isExistingCreator = room.CreatorConnectionId == Context.ConnectionId;
                 await Clients.Caller.SendAsync("RoomState", new
@@ -132,7 +132,7 @@ public class GameHub : Hub
                     canStart = room.CanStart(),
                     isCreator = isExistingCreator
                 });
-                
+
                 _logger.LogInformation("JoinRoom: Estado da sala '{RoomId}' reenviado para '{PlayerName}'", normalizedRoomId, playerName);
                 return new { success = true };
             }
@@ -162,12 +162,13 @@ public class GameHub : Hub
                     rank = player.Rank.ToString(),
                     isRoomCreator = player.IsRoomCreator
                 },
-                totalPlayers = room.GameState.Players.Count
+                totalPlayers = room.GameState.Players.Count,
+                canStart = room.CanStart()  // Adiciona o canStart para atualizar o estado no frontend
             });
 
             // Envia o estado atual da sala para o novo jogador
             _logger.LogInformation("JoinRoom: Enviando estado da sala '{RoomId}' para novo jogador '{PlayerName}'", normalizedRoomId, playerName);
-            
+
             await Clients.Caller.SendAsync("RoomState", new
             {
                 roomId = room.Id,
@@ -200,7 +201,7 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("StartGame: Tentando iniciar jogo (conexão: {ConnectionId})", Context.ConnectionId);
-            
+
             var room = _roomManager.FindRoomByConnectionId(Context.ConnectionId);
             if (room == null)
             {
@@ -231,6 +232,7 @@ public class GameHub : Hub
                 {
                     gameNumber = room.GameState.GameNumber,
                     isFirstGame = room.GameState.IsFirstGame,
+                    yourPlayerId = p.Id,  // Adiciona o ID do jogador para identificação
                     yourCards = p.Hand.Select(c => new
                     {
                         id = c.Id,
@@ -247,7 +249,8 @@ public class GameHub : Hub
                         id = pl.Id,
                         name = pl.Name,
                         rank = pl.Rank.ToString(),
-                        cardCount = pl.Hand.Count
+                        cardCount = pl.Hand.Count,
+                        isRoomCreator = pl.IsRoomCreator  // Adiciona isRoomCreator
                     })
                 });
             }
@@ -267,7 +270,7 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("PlayCards: Jogador tentando jogar {CardCount} carta(s) (conexão: {ConnectionId})", cardIds.Count, Context.ConnectionId);
-            
+
             var room = _roomManager.FindRoomByConnectionId(Context.ConnectionId);
             if (room == null)
             {
@@ -303,16 +306,18 @@ public class GameHub : Hub
             }
 
             // Notifica todos os jogadores sobre a jogada
+            var playedCards = room.GameState.LastPlay?.Cards?.Select(c => new
+            {
+                id = c.Id,
+                value = c.Value.ToString(),
+                suit = c.Suit.ToString()
+            }).ToList();
+
             await Clients.Group(room.Id).SendAsync("PlayerPlayed", new
             {
                 playerId = player.Id,
                 playerName = player.Name,
-                cards = room.GameState.LastPlay?.Cards.Select(c => new
-                {
-                    id = c.Id,
-                    value = c.Value.ToString(),
-                    suit = c.Suit.ToString()
-                }),
+                cards = playedCards,
                 playType = room.GameState.LastPlay?.Type.ToString(),
                 playerCardCount = player.Hand.Count,
                 currentPlayer = new
@@ -365,7 +370,7 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("Pass: Jogador tentando passar (conexão: {ConnectionId})", Context.ConnectionId);
-            
+
             var room = _roomManager.FindRoomByConnectionId(Context.ConnectionId);
             if (room == null)
             {
@@ -437,7 +442,7 @@ public class GameHub : Hub
         try
         {
             _logger.LogInformation("StartNextGame: Tentando iniciar próxima partida (conexão: {ConnectionId})", Context.ConnectionId);
-            
+
             var room = _roomManager.FindRoomByConnectionId(Context.ConnectionId);
             if (room == null)
             {
@@ -469,6 +474,7 @@ public class GameHub : Hub
                 {
                     gameNumber = room.GameState.GameNumber,
                     isFirstGame = room.GameState.IsFirstGame,
+                    yourPlayerId = p.Id,  // Adiciona o ID do jogador para identificação
                     yourCards = p.Hand.Select(c => new
                     {
                         id = c.Id,
@@ -485,7 +491,8 @@ public class GameHub : Hub
                         id = pl.Id,
                         name = pl.Name,
                         rank = pl.Rank.ToString(),
-                        cardCount = pl.Hand.Count
+                        cardCount = pl.Hand.Count,
+                        isRoomCreator = pl.IsRoomCreator  // Adiciona isRoomCreator
                     })
                 });
             }

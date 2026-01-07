@@ -8,12 +8,12 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<RoomManager>();
 builder.Services.AddSingleton<GameEngine>();
 
-// Configure CORS
+// Configure CORS - Permite acesso de qualquer IP da rede local
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:5174")
+        policy.SetIsOriginAllowed(_ => true)  // Permite qualquer origem
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

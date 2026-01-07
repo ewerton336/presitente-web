@@ -99,10 +99,13 @@ export function Lobby() {
     // Handler para quando um jogador entra
     const handlePlayerJoined = (data: any) => {
       console.log("Jogador entrou:", data);
+      console.log("canStart atualizado:", data.canStart);
       if (gameState) {
         setGameState({
           ...gameState,
           players: [...gameState.players, data.player],
+          canStart:
+            data.canStart !== undefined ? data.canStart : gameState.canStart,
         });
       }
     };
@@ -110,6 +113,10 @@ export function Lobby() {
     // Handler para quando recebe o estado da sala
     const handleRoomState = (data: any) => {
       console.log("=== RoomState recebido ===", data);
+      console.log("canStart:", data.canStart);
+      console.log("phase:", data.phase);
+      console.log("players count:", data.players?.length);
+      console.log("isCreator:", data.isCreator);
       setGameState(data);
       setLoading(false);
     };

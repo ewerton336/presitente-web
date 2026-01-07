@@ -11,8 +11,13 @@ class GameService {
       return;
     }
 
+    // Usa o hostname atual para funcionar tanto local quanto na rede
+    const backendUrl = window.location.hostname === 'localhost' 
+      ? 'http://localhost:5188/gameHub'
+      : `http://${window.location.hostname}:5188/gameHub`;
+    
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5188/gameHub')
+      .withUrl(backendUrl)
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)
       .build();

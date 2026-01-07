@@ -32,7 +32,7 @@ export function GameTable({ lastPlay, currentPlayerName }: GameTableProps) {
           minHeight: 150
         }}
       >
-        {lastPlay ? (
+        {lastPlay && lastPlay.cards && lastPlay.cards.length > 0 ? (
           <>
             <Typography variant="subtitle1" color="text.secondary" gutterBottom>
               Última jogada de {lastPlay.playerName}:

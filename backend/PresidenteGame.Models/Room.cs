@@ -32,9 +32,13 @@ public class Room
 
     public bool CanStart()
     {
-        return GameState.Players.Count >= 2 && 
-               GameState.Players.Count <= MaxPlayers &&
-               GameState.Phase == GamePhase.WaitingForPlayers;
+        var canStart = GameState.Players.Count >= 2 && 
+                       GameState.Players.Count <= MaxPlayers &&
+                       GameState.Phase == GamePhase.WaitingForPlayers;
+        
+        Console.WriteLine($"[Room.CanStart] RoomId={Id}, Players={GameState.Players.Count}, Phase={GameState.Phase}, CanStart={canStart}");
+        
+        return canStart;
     }
 
     public bool IsFull()
