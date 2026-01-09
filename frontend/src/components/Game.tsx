@@ -45,6 +45,7 @@ export function Game() {
   const [isCreator, setIsCreator] = useState(false);
   const [myPlayerId, setMyPlayerId] = useState<string>("");
   const [showNewRoundAnimation, setShowNewRoundAnimation] = useState(false);
+  const [roundWinnerName, setRoundWinnerName] = useState<string | null>(null);
   const [showCardExchangeAnimation, setShowCardExchangeAnimation] = useState(false);
   const [cardExchanges, setCardExchanges] = useState<any[]>([]);
 
@@ -105,6 +106,7 @@ export function Game() {
     // Handler para nova rodada
     const handleNewRound = (data: any) => {
       console.log("Nova rodada:", data);
+      setRoundWinnerName(data.winnerName || null);
       setShowNewRoundAnimation(true);
       setLastPlay(null);
       setCurrentPlayer(data.currentPlayer);
@@ -354,7 +356,8 @@ export function Game() {
 
       {/* Animação de Nova Rodada */}
       <NewRoundAnimation 
-        show={showNewRoundAnimation} 
+        show={showNewRoundAnimation}
+        winnerName={roundWinnerName}
         onComplete={() => setShowNewRoundAnimation(false)}
       />
 

@@ -414,6 +414,22 @@ public class GameHub : Hub
                 });
                 _logger.LogInformation("PlayCards: Jogo terminou na sala '{RoomId}'", room.Id);
             }
+            // Se uma nova rodada foi iniciada (por exemplo, ao jogar um Rei)
+            else if (room.GameState.LastPlay == null && room.GameState.RoundWinnerId != null)
+            {
+                var roundWinner = room.GameState.Players.FirstOrDefault(p => p.Id == room.GameState.RoundWinnerId);
+                await Clients.Group(room.Id).SendAsync("NewRound", new
+                {
+                    winnerId = room.GameState.RoundWinnerId,
+                    winnerName = roundWinner?.Name,
+                    currentPlayer = new
+                    {
+                        id = room.GameState.GetCurrentPlayer()?.Id,
+                        name = room.GameState.GetCurrentPlayer()?.Name
+                    }
+                });
+                _logger.LogInformation("PlayCards: Nova rodada iniciada na sala '{RoomId}', vencedor: {WinnerName}", room.Id, roundWinner?.Name);
+            }
 
             _logger.LogInformation("PlayCards: Jogada executada com sucesso pelo jogador '{PlayerName}' na sala '{RoomId}'", player.Name, room.Id);
             return new { success = true };
@@ -475,16 +491,18 @@ public class GameHub : Hub
             // Se iniciou uma nova rodada
             if (room.GameState.LastPlay == null)
             {
+                var roundWinner = room.GameState.Players.FirstOrDefault(p => p.Id == room.GameState.RoundWinnerId);
                 await Clients.Group(room.Id).SendAsync("NewRound", new
                 {
                     winnerId = room.GameState.RoundWinnerId,
+                    winnerName = roundWinner?.Name,
                     currentPlayer = new
                     {
                         id = room.GameState.GetCurrentPlayer()?.Id,
                         name = room.GameState.GetCurrentPlayer()?.Name
                     }
                 });
-                _logger.LogInformation("Pass: Nova rodada iniciada na sala '{RoomId}'", room.Id);
+                _logger.LogInformation("Pass: Nova rodada iniciada na sala '{RoomId}', vencedor: {WinnerName}", room.Id, roundWinner?.Name);
             }
 
             _logger.LogInformation("Pass: Jogador '{PlayerName}' passou com sucesso na sala '{RoomId}'", player.Name, room.Id);

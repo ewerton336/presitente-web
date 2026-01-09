@@ -5,6 +5,7 @@ import { newRoundBannerVariants, confettiVariants } from '../styles/animations';
 
 interface NewRoundAnimationProps {
   show: boolean;
+  winnerName?: string | null;
   onComplete?: () => void;
 }
 
@@ -27,7 +28,7 @@ function ConfettiParticle({ index, color }: { index: number; color: string }) {
   );
 }
 
-export const NewRoundAnimation = memo(function NewRoundAnimation({ show, onComplete }: NewRoundAnimationProps) {
+export const NewRoundAnimation = memo(function NewRoundAnimation({ show, winnerName, onComplete }: NewRoundAnimationProps) {
   const confettiColors = [
     '#FF6B6B',
     '#4ECDC4',
@@ -78,12 +79,25 @@ export const NewRoundAnimation = memo(function NewRoundAnimation({ show, onCompl
               sx={{
                 backgroundColor: 'primary.main',
                 color: 'white',
-                padding: '40px 80px',
+                padding: { xs: '30px 40px', md: '40px 80px' },
                 borderRadius: '16px',
                 boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
                 textAlign: 'center',
               }}
             >
+              {winnerName && (
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 'medium',
+                    fontSize: { xs: '1.2rem', md: '1.8rem' },
+                    mb: 2,
+                    opacity: 0.95,
+                  }}
+                >
+                  🏆 {winnerName} venceu a rodada!
+                </Typography>
+              )}
               <Typography
                 variant="h2"
                 sx={{
