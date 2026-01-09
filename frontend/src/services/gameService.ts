@@ -81,6 +81,16 @@ class GameService {
     this.connection.on('NewRound', (data) => {
       this.triggerCallbacks('NewRound', data);
     });
+
+    // CardExchangeStarted
+    this.connection.on('CardExchangeStarted', (data) => {
+      this.triggerCallbacks('CardExchangeStarted', data);
+    });
+
+    // CardExchangeCompleted
+    this.connection.on('CardExchangeCompleted', (data) => {
+      this.triggerCallbacks('CardExchangeCompleted', data);
+    });
   }
 
   private triggerCallbacks(event: string, data: any): void {

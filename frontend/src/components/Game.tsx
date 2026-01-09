@@ -20,6 +20,8 @@ import type { Card, Player, CardPlay } from "../types/game";
 import { GameTable } from "./GameTable";
 import { PlayerHand } from "./PlayerHand";
 import { PlayersList } from "./PlayersList";
+import { NewRoundAnimation } from "./NewRoundAnimation";
+import { CardExchangeAnimation } from "./CardExchangeAnimation";
 
 export function Game() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -42,6 +44,9 @@ export function Game() {
   const [rankings, setRankings] = useState<any[]>([]);
   const [isCreator, setIsCreator] = useState(false);
   const [myPlayerId, setMyPlayerId] = useState<string>("");
+  const [showNewRoundAnimation, setShowNewRoundAnimation] = useState(false);
+  const [showCardExchangeAnimation, setShowCardExchangeAnimation] = useState(false);
+  const [cardExchanges, setCardExchanges] = useState<any[]>([]);
 
   useEffect(() => {
     const gameData = location.state?.gameData;
@@ -100,9 +105,15 @@ export function Game() {
     // Handler para nova rodada
     const handleNewRound = (data: any) => {
       console.log("Nova rodada:", data);
+      setShowNewRoundAnimation(true);
       setLastPlay(null);
       setCurrentPlayer(data.currentPlayer);
-      setMessage("Nova rodada iniciada!");
+      
+      // Oculta a animação após 2 segundos
+      setTimeout(() => {
+        setShowNewRoundAnimation(false);
+        setMessage("Nova rodada iniciada!");
+      }, 2000);
     };
 
     // Handler para quando um jogador termina
@@ -138,12 +149,27 @@ export function Game() {
       setMessage("Novo jogo iniciado!");
     };
 
+    // Handler para quando a troca de cartas inicia
+    const handleCardExchangeStarted = (data: any) => {
+      console.log("Troca de cartas iniciada:", data);
+      setCardExchanges(data.exchanges || []);
+      setShowCardExchangeAnimation(true);
+    };
+
+    // Handler para quando a troca de cartas termina
+    const handleCardExchangeCompleted = () => {
+      console.log("Troca de cartas completada");
+      setShowCardExchangeAnimation(false);
+    };
+
     gameService.on("PlayerPlayed", handlePlayerPlayed);
     gameService.on("PlayerPassed", handlePlayerPassed);
     gameService.on("NewRound", handleNewRound);
     gameService.on("PlayerFinished", handlePlayerFinished);
     gameService.on("GameFinished", handleGameFinished);
     gameService.on("GameStarted", handleGameStarted);
+    gameService.on("CardExchangeStarted", handleCardExchangeStarted);
+    gameService.on("CardExchangeCompleted", handleCardExchangeCompleted);
 
     return () => {
       gameService.off("PlayerPlayed", handlePlayerPlayed);
@@ -152,6 +178,8 @@ export function Game() {
       gameService.off("PlayerFinished", handlePlayerFinished);
       gameService.off("GameFinished", handleGameFinished);
       gameService.off("GameStarted", handleGameStarted);
+      gameService.off("CardExchangeStarted", handleCardExchangeStarted);
+      gameService.off("CardExchangeCompleted", handleCardExchangeCompleted);
     };
   }, []);
 
@@ -260,17 +288,17 @@ export function Game() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, px: { xs: 1, md: 3 } }}>
       <Box
         sx={{
           display: "flex",
-          gap: 3,
+          gap: { xs: 2, md: 3 },
           flexDirection: { xs: "column", md: "row" },
         }}
       >
         <Box sx={{ flex: { md: "1 1 75%" } }}>
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
               Sala: {roomId}
             </Typography>
           </Box>
@@ -286,9 +314,9 @@ export function Game() {
             onCardClick={handleCardClick}
             onPlay={handlePlay}
             onPass={handlePass}
-            canPlay={isMyTurn && gamePhase === "Playing"}
-            canPass={isMyTurn && lastPlay !== null && gamePhase === "Playing"}
-            disabled={!isMyTurn || gamePhase !== "Playing"}
+            canPlay={isMyTurn && gamePhase === "Playing" && !showCardExchangeAnimation}
+            canPass={isMyTurn && lastPlay !== null && gamePhase === "Playing" && !showCardExchangeAnimation}
+            disabled={!isMyTurn || gamePhase !== "Playing" || showCardExchangeAnimation}
           />
         </Box>
 
@@ -323,6 +351,19 @@ export function Game() {
           {error}
         </Alert>
       </Snackbar>
+
+      {/* Animação de Nova Rodada */}
+      <NewRoundAnimation 
+        show={showNewRoundAnimation} 
+        onComplete={() => setShowNewRoundAnimation(false)}
+      />
+
+      {/* Animação de Troca de Cartas */}
+      <CardExchangeAnimation 
+        show={showCardExchangeAnimation}
+        exchanges={cardExchanges}
+        onComplete={() => setShowCardExchangeAnimation(false)}
+      />
 
       {/* Dialog de fim de jogo */}
       <Dialog open={gameFinished} maxWidth="sm" fullWidth>

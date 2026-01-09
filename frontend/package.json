@@ -19,6 +19,7 @@
     "@microsoft/signalr": "^10.0.0",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
+    "framer-motion": "^12.25.0",
     "react-router-dom": "^6.30.2"
   }
 }

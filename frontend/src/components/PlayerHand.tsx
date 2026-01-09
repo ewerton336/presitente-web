@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
+import { AnimatePresence } from 'framer-motion';
 import type { Card } from '../types/game';
-import { CardComponent } from './CardComponent';
+import { AnimatedCard } from './AnimatedCard';
 
 interface PlayerHandProps {
   cards: Card[];
@@ -23,6 +25,19 @@ export function PlayerHand({
   canPass,
   disabled
 }: PlayerHandProps) {
+  const [hasDealt, setHasDealt] = useState(false);
+  const [previousCardCount, setPreviousCardCount] = useState(0);
+
+  // Detecta quando cartas são distribuídas pela primeira vez ou quando há uma nova distribuição
+  useEffect(() => {
+    if (cards.length > 0 && previousCardCount === 0) {
+      setHasDealt(false);
+      // Pequeno delay para garantir que a animação seja acionada
+      setTimeout(() => setHasDealt(true), 50);
+    }
+    setPreviousCardCount(cards.length);
+  }, [cards.length, previousCardCount]);
+
   return (
     <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
       <Typography variant="h6" gutterBottom>
@@ -33,24 +48,45 @@ export function PlayerHand({
         sx={{
           display: 'flex',
           gap: 1,
-          flexWrap: 'wrap',
+          flexWrap: { xs: 'nowrap', md: 'wrap' },
           justifyContent: 'center',
           mb: 3,
-          minHeight: 130
+          minHeight: { xs: 100, md: 130 },
+          overflowX: { xs: 'auto', md: 'visible' },
+          overflowY: 'visible',
+          px: { xs: 1, md: 0 },
+          '&::-webkit-scrollbar': {
+            height: 8,
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: '#f1f1f1',
+            borderRadius: 4,
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: '#888',
+            borderRadius: 4,
+            '&:hover': {
+              backgroundColor: '#555',
+            },
+          },
         }}
       >
         {cards.length === 0 ? (
           <Typography color="text.secondary">Você terminou suas cartas!</Typography>
         ) : (
-          cards.map((card) => (
-            <CardComponent
-              key={card.id}
-              card={card}
-              selected={selectedCards.includes(card.id)}
-              onClick={() => onCardClick(card.id)}
-              disabled={disabled}
-            />
-          ))
+          <AnimatePresence mode="popLayout">
+            {cards.map((card, index) => (
+              <AnimatedCard
+                key={card.id}
+                card={card}
+                selected={selectedCards.includes(card.id)}
+                onClick={() => onCardClick(card.id)}
+                disabled={disabled}
+                showDealAnimation={hasDealt && previousCardCount > 5}
+                index={index}
+              />
+            ))}
+          </AnimatePresence>
         )}
       </Box>
 

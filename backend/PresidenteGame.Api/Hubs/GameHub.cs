@@ -223,7 +223,67 @@ public class GameHub : Hub
             }
 
             _logger.LogInformation("StartGame: Iniciando jogo na sala '{RoomId}' com {PlayerCount} jogadores", room.Id, room.GameState.Players.Count);
+            
+            // Verifica se haverá troca de cartas (apenas se não é o primeiro jogo)
+            var willExchangeCards = !room.GameState.IsFirstGame;
+            
             _gameEngine.StartGame(room);
+
+            // Se houver troca de cartas, notifica os jogadores
+            if (willExchangeCards)
+            {
+                var presidente = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.Presidente);
+                var vice = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.VicePresidente);
+                var subCu = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.SubCu);
+                var cu = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.Cu);
+
+                var exchanges = new List<object>();
+                
+                if (cu != null && presidente != null)
+                {
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = cu.Id, name = cu.Name },
+                        toPlayer = new { id = presidente.Id, name = presidente.Name },
+                        cardCount = 2
+                    });
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = presidente.Id, name = presidente.Name },
+                        toPlayer = new { id = cu.Id, name = cu.Name },
+                        cardCount = 2
+                    });
+                }
+
+                if (subCu != null && vice != null)
+                {
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = subCu.Id, name = subCu.Name },
+                        toPlayer = new { id = vice.Id, name = vice.Name },
+                        cardCount = 1
+                    });
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = vice.Id, name = vice.Name },
+                        toPlayer = new { id = subCu.Id, name = subCu.Name },
+                        cardCount = 1
+                    });
+                }
+
+                await Clients.Group(room.Id).SendAsync("CardExchangeStarted", new
+                {
+                    exchanges = exchanges
+                });
+
+                _logger.LogInformation("StartGame: Troca de cartas iniciada na sala '{RoomId}'", room.Id);
+
+                // Aguarda 3 segundos para a animação
+                await Task.Delay(3000);
+
+                await Clients.Group(room.Id).SendAsync("CardExchangeCompleted");
+                _logger.LogInformation("StartGame: Troca de cartas completada na sala '{RoomId}'", room.Id);
+            }
 
             // Notifica todos os jogadores que o jogo começou
             foreach (var p in room.GameState.Players)
@@ -465,7 +525,67 @@ public class GameHub : Hub
 
             _logger.LogInformation("StartNextGame: Preparando próxima partida na sala '{RoomId}'", room.Id);
             _gameEngine.PrepareNextGame(room);
+            
+            // Verifica se haverá troca de cartas (sempre haverá após o primeiro jogo)
+            var willExchangeCards = !room.GameState.IsFirstGame;
+            
             _gameEngine.StartGame(room);
+
+            // Se houver troca de cartas, notifica os jogadores
+            if (willExchangeCards)
+            {
+                var presidente = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.Presidente);
+                var vice = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.VicePresidente);
+                var subCu = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.SubCu);
+                var cu = room.GameState.Players.FirstOrDefault(p => p.Rank == PlayerRank.Cu);
+
+                var exchanges = new List<object>();
+                
+                if (cu != null && presidente != null)
+                {
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = cu.Id, name = cu.Name },
+                        toPlayer = new { id = presidente.Id, name = presidente.Name },
+                        cardCount = 2
+                    });
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = presidente.Id, name = presidente.Name },
+                        toPlayer = new { id = cu.Id, name = cu.Name },
+                        cardCount = 2
+                    });
+                }
+
+                if (subCu != null && vice != null)
+                {
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = subCu.Id, name = subCu.Name },
+                        toPlayer = new { id = vice.Id, name = vice.Name },
+                        cardCount = 1
+                    });
+                    exchanges.Add(new
+                    {
+                        fromPlayer = new { id = vice.Id, name = vice.Name },
+                        toPlayer = new { id = subCu.Id, name = subCu.Name },
+                        cardCount = 1
+                    });
+                }
+
+                await Clients.Group(room.Id).SendAsync("CardExchangeStarted", new
+                {
+                    exchanges = exchanges
+                });
+
+                _logger.LogInformation("StartNextGame: Troca de cartas iniciada na sala '{RoomId}'", room.Id);
+
+                // Aguarda 3 segundos para a animação
+                await Task.Delay(3000);
+
+                await Clients.Group(room.Id).SendAsync("CardExchangeCompleted");
+                _logger.LogInformation("StartNextGame: Troca de cartas completada na sala '{RoomId}'", room.Id);
+            }
 
             // Notifica todos os jogadores
             foreach (var p in room.GameState.Players)

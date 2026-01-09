@@ -30,17 +30,18 @@ export function PlayersList({ players, currentPlayerId }: PlayersListProps) {
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-      <Typography variant="h6" gutterBottom>
+    <Paper elevation={3} sx={{ p: { xs: 1.5, md: 2 }, height: '100%' }}>
+      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
         Jogadores
       </Typography>
-      <List dense>
+      <List dense sx={{ py: 0 }}>
         {players.map((player, index) => (
           <Box key={player.id}>
             <ListItem
               sx={{
                 backgroundColor: currentPlayerId === player.id ? '#e3f2fd' : 'transparent',
-                borderRadius: 1
+                borderRadius: 1,
+                py: { xs: 0.5, md: 1 },
               }}
             >
               <ListItemText
@@ -49,7 +50,8 @@ export function PlayersList({ players, currentPlayerId }: PlayersListProps) {
                     <Typography
                       variant="body2"
                       sx={{
-                        fontWeight: currentPlayerId === player.id ? 'bold' : 'normal'
+                        fontWeight: currentPlayerId === player.id ? 'bold' : 'normal',
+                        fontSize: { xs: '0.875rem', md: '0.875rem' },
                       }}
                     >
                       {player.name}
@@ -59,10 +61,16 @@ export function PlayersList({ players, currentPlayerId }: PlayersListProps) {
                         label={getRankLabel(player.rank)}
                         size="small"
                         color={getRankColor(player.rank)}
+                        sx={{ fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
                       />
                     )}
                     {player.hasFinished && (
-                      <Chip label="Terminou" size="small" color="default" />
+                      <Chip 
+                        label="Terminou" 
+                        size="small" 
+                        color="default"
+                        sx={{ fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
+                      />
                     )}
                   </Box>
                 }
